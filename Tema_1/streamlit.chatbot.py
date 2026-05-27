@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 import streamlit as st
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 
 # Configuración de la página de la app
@@ -19,10 +19,19 @@ st.markdown(
 with st.sidebar:
     st.header("Configuración")
     temperature = st.slider("Temperatura", 0.0, 1.0, 0.5, 0.1)
-    model_name = st.selectbox(
-        "Modelo",
-        ["gpt-3.5-turbo", "gpt-4", "gpt-4o-mini"]
+    model_name = st.selectbox("Modelo", ["gpt-3.5-turbo", "gpt-4", "gpt-4o-mini"])
+
+    personalidad = st.selectbox(
+        "Personalidad del Asistente",
+        [
+            "Útil y amigable",
+            "Profesional y formal", 
+            "Casual y relajado",
+            "Experto técnico",
+            "Creativo y divertido"
+        ]
     )
+
 
 # Inicializar el modelo de lenguaje
 chat_model = ChatOpenAI(
@@ -30,28 +39,26 @@ chat_model = ChatOpenAI(
     temperature=temperature
 )
 
+system_messages = {
+        "Útil y amigable": "Eres un asistente útil y amigable llamado ChatBot Pro. Responde de manera clara y concisa.",
+        "Profesional y formal": "Eres un asistente profesional y formal. Proporciona respuestas precisas y bien estructuradas.",
+        "Casual y relajado": "Eres un asistente casual y relajado. Habla de forma natural y amigable, como un buen amigo.",
+        "Experto técnico": "Eres un asistente experto técnico. Proporciona respuestas detalladas con precisión técnica.",
+        "Creativo y divertido": "Eres un asistente creativo y divertido. Usa analogías, ejemplos creativos y mantén un tono alegre."
+    }
 
 # Inicializar el historial de mensajes
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-prompt_template = PromptTemplate(
-    input_variables=["mensaje", "historial"],
-    template="""
-Eres un asistente útil y amigable llamado ChatBot Pro.
-
-Historial de conversación:
-{historial}
-
-Responde de manera clara y concisa a la siguiente pregunta:
-
-{mensaje}
-"""
-)
+chat_prompt_template = ChatPromptTemplate.from_messages([
+    ("system", system_messages[personalidad]),
+    ("human", "Historial de conversación:\n{historial}\n\nPregunta actual: {mensaje}")
+])
 
 # Crear cadena usando LCEL
-cadena = prompt_template | chat_model
+cadena = chat_prompt_template | chat_model
 
 # Mostrar el historial de mensajes en la interfaz
 for msg in st.session_state.messages:
